@@ -1,6 +1,5 @@
 import asyncio
 import json
-import os
 import re
 from contextlib import asynccontextmanager
 from datetime import datetime, date, time as dt_time
@@ -8,9 +7,8 @@ from types import SimpleNamespace
 from typing import Any, Dict, List, Literal, Optional, Tuple
 from uuid import uuid4
 
-import pytz
 import hashlib
-from dotenv import load_dotenv
+import pytz
 from fastapi import (
     APIRouter,
     Depends,
@@ -26,7 +24,9 @@ from google.api_core import exceptions as gexc
 from google.cloud import storage
 from pydantic import BaseModel, Field, validator
 
-load_dotenv()
+
+GCS_BUCKET_NAME = "data_research"
+GCS_PREFIX = "binance_alpha"
 
 
 # -----------------------------------------------------------------------------
@@ -41,11 +41,8 @@ class FileDocumentStore:
     """Minimal JSON document store backed by Google Cloud Storage."""
 
     def __init__(self) -> None:
-        bucket = os.getenv("GCS_BUCKET") or os.getenv("BUCKET")
-        if not bucket:
-            raise RuntimeError("GCS_BUCKET or BUCKET environment variable is required")
-        self.bucket_name = bucket
-        self.prefix = os.getenv("GCS_PREFIX", "binance_alpha")
+        self.bucket_name = GCS_BUCKET_NAME
+        self.prefix = GCS_PREFIX
         self.client = storage.Client()
         self.bucket = self.client.bucket(self.bucket_name)
 
