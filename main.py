@@ -1,6 +1,5 @@
 import asyncio
 import json
-import os
 import re
 from contextlib import asynccontextmanager
 from datetime import datetime, date, time as dt_time
@@ -28,18 +27,6 @@ from pydantic import BaseModel, Field, validator
 
 GCS_BUCKET_NAME = "data_research"
 GCS_PREFIX = "binance_alpha"
-
-CORS_ALLOWED_ORIGINS = os.getenv("ALPHA_ALLOWED_ORIGINS", "*")
-if CORS_ALLOWED_ORIGINS == "*":
-    CORS_ALLOW_ORIGINS: List[str] = []
-    CORS_ALLOW_ORIGIN_REGEX: Optional[str] = ".*"
-else:
-    CORS_ALLOW_ORIGINS = [
-        origin.strip()
-        for origin in CORS_ALLOWED_ORIGINS.split(",")
-        if origin.strip()
-    ]
-    CORS_ALLOW_ORIGIN_REGEX = None
 
 
 # -----------------------------------------------------------------------------
@@ -690,8 +677,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ALLOW_ORIGINS,
-    allow_origin_regex=CORS_ALLOW_ORIGIN_REGEX,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
