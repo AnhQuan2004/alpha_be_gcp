@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import re
 from contextlib import asynccontextmanager
 from datetime import datetime, date, time as dt_time
@@ -27,6 +28,18 @@ from pydantic import BaseModel, Field, validator
 
 GCS_BUCKET_NAME = "data_research"
 GCS_PREFIX = "binance_alpha"
+
+CORS_ALLOWED_ORIGINS = os.getenv("ALPHA_ALLOWED_ORIGINS", "*")
+if CORS_ALLOWED_ORIGINS == "*":
+    CORS_ALLOW_ORIGINS: List[str] = []
+    CORS_ALLOW_ORIGIN_REGEX: Optional[str] = ".*"
+else:
+    CORS_ALLOW_ORIGINS = [
+        origin.strip()
+        for origin in CORS_ALLOWED_ORIGINS.split(",")
+        if origin.strip()
+    ]
+    CORS_ALLOW_ORIGIN_REGEX = None
 
 
 # -----------------------------------------------------------------------------
@@ -677,13 +690,33 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ALLOW_ORIGINS,
+    allow_origin_regex=CORS_ALLOW_ORIGIN_REGEX,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["ETag", "Last-Modified", "Content-Type"],
     max_age=3600,
 )
+
+
+@app.middleware("http")
+async def ensure_cors_headers(request: Request, call_next):
+    """Guarantee CORS headers even when exceptions bubble up."""
+    if request.method == "OPTIONS":
+        headers = {
+            "Access-Control-Allow-Origin": request.headers.get("origin", "*"),
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            "Access-Control-Max-Age": "3600",
+        }
+        return Response(status_code=204, headers=headers)
+
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = request.headers.get("origin", "*")
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    return response
 
 
 @app.exception_handler(ValueError)
